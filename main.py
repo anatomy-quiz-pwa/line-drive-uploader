@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Request
 from linebot import LineBotApi, WebhookHandler
-from linebot.models import MessageEvent, FileMessage, FlexSendMessage
+from linebot.models import MessageEvent, FileMessage, FlexSendMessage, TextSendMessage
 from config import LINE_CHANNEL_ACCESS_TOKEN, LINE_CHANNEL_SECRET
 from drive_uploader import upload_file_to_drive
 from message_formatter import create_flex_message
@@ -32,15 +32,40 @@ def handle_file_message(event):
     
     file_name = event.message.file_name
     file_content = line_bot_api.get_message_content(event.message.id)
-    with tempfile.NamedTemporaryFile(delete=False) as tmp:
-        for chunk in file_content.iter_content():
-            tmp.write(chunk)
-        tmp_path = tmp.name
+    
+    try:
+        with tempfile.NamedTemporaryFile(delete=False) as tmp:
+            for chunk in file_content.iter_content():
+                tmp.write(chunk)
+            tmp_path = tmp.name
 
-    file_size = os.path.getsize(tmp_path) / (1024 * 1024)  # MB
-    uploaded_at = datetime.datetime.now().strftime('%Y/%m/%d %H:%M')
-    file_id, web_link = upload_file_to_drive(tmp_path, file_name)
-    flex = create_flex_message(file_name, file_size, web_link, uploaded_at)
+        file_size = os.path.getsize(tmp_path) / (1024 * 1024)  # MB
+        uploaded_at = datetime.datetime.now().strftime('%Y/%m/%d %H:%M')
+        
+        print(f"📤 開始上傳檔案: {file_name}")
+        file_id, web_link = upload_file_to_drive(tmp_path, file_name)
+        flex = create_flex_message(file_name, file_size, web_link, uploaded_at)
 
-    line_bot_api.reply_message(event.reply_token, FlexSendMessage.new_from_json_dict(flex))
-    os.remove(tmp_path) 
+        line_bot_api.reply_message(event.reply_token, FlexSendMessage.new_from_json_dict(flex))
+        print(f"✅ 成功回覆 Flex 訊息")
+        
+    except Exception as e:
+        error_msg = f"❌ 檔案上傳失敗，請聯絡管理員"
+        print(f"🚨 上傳失敗: {str(e)}")
+        print(f"   錯誤類型: {type(e).__name__}")
+        print(f"   檔案名稱: {file_name}")
+        
+        try:
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text=error_msg))
+            print(f"✅ 成功回覆錯誤訊息")
+        except Exception as reply_error:
+            print(f"🚨 回覆錯誤訊息失敗: {str(reply_error)}")
+    
+    finally:
+        # 清理臨時檔案
+        if 'tmp_path' in locals():
+            try:
+                os.remove(tmp_path)
+                print(f"🧹 已清理臨時檔案: {tmp_path}")
+            except Exception as cleanup_error:
+                print(f"⚠️ 清理臨時檔案失敗: {str(cleanup_error)}") 
