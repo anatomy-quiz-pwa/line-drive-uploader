@@ -10,6 +10,14 @@ app = FastAPI()
 line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(LINE_CHANNEL_SECRET)
 
+@app.get("/")
+async def root():
+    return {"message": "LINE Drive Uploader Bot is running!", "status": "active"}
+
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy", "timestamp": datetime.datetime.now().isoformat()}
+
 @app.post("/callback")
 async def callback(request: Request):
     body = await request.body()
