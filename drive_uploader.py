@@ -23,7 +23,7 @@ else:
 
 drive_service = build('drive', 'v3', credentials=credentials)
 
-def create_folder(folder_name):
+def create_folder(folder_name, parent_folder_id=None):
     """建立 Google Drive 資料夾"""
     print(f"📁 建立資料夾: {folder_name}")
     
@@ -32,18 +32,26 @@ def create_folder(folder_name):
         'mimeType': 'application/vnd.google-apps.folder'
     }
     
+    # 如果有指定父資料夾，則加入
+    if parent_folder_id:
+        file_metadata['parents'] = [parent_folder_id]
+        print(f"   父資料夾 ID: {parent_folder_id}")
+    
     folder = drive_service.files().create(body=file_metadata, fields='id').execute()
     folder_id = folder.get('id')
     
     print(f"   ✅ 資料夾建立成功，ID: {folder_id}")
     return folder_id
 
-def find_or_create_folder(folder_name):
+def find_or_create_folder(folder_name, parent_folder_id=None):
     """尋找資料夾，如果不存在則建立"""
     print(f"🔍 尋找資料夾: {folder_name}")
     
     # 搜尋現有資料夾
     query = f"name='{folder_name}' and mimeType='application/vnd.google-apps.folder' and trashed=false"
+    if parent_folder_id:
+        query += f" and '{parent_folder_id}' in parents"
+    
     results = drive_service.files().list(q=query, fields="files(id, name)").execute()
     files = results.get('files', [])
     
@@ -53,15 +61,38 @@ def find_or_create_folder(folder_name):
         return folder_id
     else:
         print(f"   📁 資料夾不存在，建立新資料夾")
-        return create_folder(folder_name)
+        return create_folder(folder_name, parent_folder_id)
+
+def get_shared_drives():
+    """取得可用的 Shared Drives"""
+    print("🔍 搜尋可用的 Shared Drives...")
+    try:
+        drives = drive_service.drives().list(fields="drives(id, name)").execute()
+        shared_drives = drives.get('drives', [])
+        print(f"   ✅ 找到 {len(shared_drives)} 個 Shared Drives")
+        for drive in shared_drives:
+            print(f"      - {drive['name']} (ID: {drive['id']})")
+        return shared_drives
+    except Exception as e:
+        print(f"   ⚠️ 無法取得 Shared Drives: {str(e)}")
+        return []
 
 def upload_file_to_drive(file_path, file_name):
     print(f"🚀 開始上傳檔案到 Google Drive")
     print(f"   檔案路徑: {file_path}")
     print(f"   檔案名稱: {file_name}")
     
+    # 嘗試使用 Shared Drive
+    shared_drives = get_shared_drives()
+    parent_folder_id = None
+    
+    if shared_drives:
+        # 使用第一個 Shared Drive
+        parent_folder_id = shared_drives[0]['id']
+        print(f"   📂 使用 Shared Drive: {shared_drives[0]['name']}")
+    
     # 自動建立或尋找上傳資料夾
-    upload_folder_id = find_or_create_folder("LINE 自動上傳")
+    upload_folder_id = find_or_create_folder("LINE 自動上傳", parent_folder_id)
     print(f"   目標資料夾 ID: {upload_folder_id}")
     
     mime_type = mimetypes.guess_type(file_path)[0] or 'application/octet-stream'
