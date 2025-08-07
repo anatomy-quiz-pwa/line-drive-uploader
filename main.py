@@ -56,9 +56,10 @@ def handle_file_message(event):
 
         try:
             line_bot_api.reply_message(event.reply_token, FlexSendMessage.new_from_json_dict(flex))
-            print("✅ 已成功回覆 Flex 訊息")
+            print("✅ 成功回覆 Flex 訊息")
         except Exception as e:
             print(f"❌ Flex 回覆失敗：{e}")
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="❌ 上傳成功，但回覆訊息失敗。請聯絡管理員"))
         
     except Exception as e:
         error_msg = f"❌ 檔案上傳失敗，請聯絡管理員"
