@@ -52,15 +52,20 @@ def find_or_create_folder(folder_name, parent_folder_id=None):
     if parent_folder_id:
         query += f" and '{parent_folder_id}' in parents"
     
-    results = drive_service.files().list(q=query, fields="files(id, name)").execute()
-    files = results.get('files', [])
-    
-    if files:
-        folder_id = files[0]['id']
-        print(f"   ✅ 找到現有資料夾，ID: {folder_id}")
-        return folder_id
-    else:
-        print(f"   📁 資料夾不存在，建立新資料夾")
+    try:
+        results = drive_service.files().list(q=query, fields="files(id, name)").execute()
+        files = results.get('files', [])
+        
+        if files:
+            folder_id = files[0]['id']
+            print(f"   ✅ 找到現有資料夾，ID: {folder_id}")
+            return folder_id
+        else:
+            print(f"   📁 資料夾不存在，建立新資料夾")
+            return create_folder(folder_name, parent_folder_id)
+    except Exception as e:
+        print(f"   ⚠️ 搜尋資料夾失敗: {str(e)}")
+        print(f"   📁 直接建立新資料夾")
         return create_folder(folder_name, parent_folder_id)
 
 def get_shared_drives():
