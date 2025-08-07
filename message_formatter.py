@@ -6,146 +6,37 @@ class MessageFormatter:
     def __init__(self):
         self.drive_uploader = DriveUploader()
     
-    def create_upload_success_message(self, upload_result: Dict, original_file_name: str) -> Dict:
-        """
-        建立上傳成功的 Flex Message
-        
-        Args:
-            upload_result: 上傳結果字典
-            original_file_name: 原始檔案名稱
-            
-        Returns:
-            LINE Flex Message 字典
-        """
-        # 格式化檔案大小
-        file_size = self.drive_uploader.format_file_size(upload_result['file_size'])
-        
-        # 格式化上傳時間
-        upload_time = datetime.fromisoformat(upload_result['created_time'].replace('Z', '+00:00'))
-        formatted_time = upload_time.strftime("%Y/%m/%d %H:%M")
-        
-        # 取得檔案類型圖示
-        icon_url = self._get_file_type_icon(original_file_name)
-        
+    def create_flex_message(self, file_name, file_size_mb, web_link, uploaded_at):
         return {
-            "type": "bubble",
-            "hero": {
-                "type": "image",
-                "url": icon_url,
-                "size": "full",
-                "aspectRatio": "20:13",
-                "aspectMode": "cover",
-                "backgroundColor": "#27AE60"
-            },
-            "body": {
-                "type": "box",
-                "layout": "vertical",
-                "spacing": "sm",
-                "contents": [
-                    {
-                        "type": "text",
-                        "text": "✅ 檔案已上傳至雲端",
-                        "weight": "bold",
-                        "size": "xl",
-                        "color": "#27AE60"
-                    },
-                    {
-                        "type": "box",
-                        "layout": "vertical",
-                        "spacing": "xs",
-                        "margin": "lg",
-                        "contents": [
-                            {
-                                "type": "box",
-                                "layout": "horizontal",
-                                "contents": [
-                                    {
-                                        "type": "text",
-                                        "text": "📄 檔案名稱",
-                                        "size": "sm",
-                                        "color": "#555555",
-                                        "flex": 0
-                                    },
-                                    {
-                                        "type": "text",
-                                        "text": original_file_name,
-                                        "size": "sm",
-                                        "color": "#111111",
-                                        "flex": 1,
-                                        "wrap": True
-                                    }
-                                ]
-                            },
-                            {
-                                "type": "box",
-                                "layout": "horizontal",
-                                "contents": [
-                                    {
-                                        "type": "text",
-                                        "text": "📊 檔案大小",
-                                        "size": "sm",
-                                        "color": "#555555",
-                                        "flex": 0
-                                    },
-                                    {
-                                        "type": "text",
-                                        "text": file_size,
-                                        "size": "sm",
-                                        "color": "#111111",
-                                        "flex": 1
-                                    }
-                                ]
-                            },
-                            {
-                                "type": "box",
-                                "layout": "horizontal",
-                                "contents": [
-                                    {
-                                        "type": "text",
-                                        "text": "⏰ 上傳時間",
-                                        "size": "sm",
-                                        "color": "#555555",
-                                        "flex": 0
-                                    },
-                                    {
-                                        "type": "text",
-                                        "text": formatted_time,
-                                        "size": "sm",
-                                        "color": "#111111",
-                                        "flex": 1
-                                    }
-                                ]
+            "type": "flex",
+            "altText": f"已上傳檔案：{file_name}",
+            "contents": {
+                "type": "bubble",
+                "body": {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {"type": "text", "text": "✅ 已上傳雲端", "weight": "bold", "size": "xl"},
+                        {"type": "text", "text": f"檔案名稱：{file_name}"},
+                        {"type": "text", "text": f"大小：{file_size_mb:.2f} MB"},
+                        {"type": "text", "text": f"上傳時間：{uploaded_at}"}
+                    ]
+                },
+                "footer": {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {
+                            "type": "button",
+                            "style": "primary",
+                            "action": {
+                                "type": "uri",
+                                "label": "開啟檔案",
+                                "uri": web_link
                             }
-                        ]
-                    }
-                ]
-            },
-            "footer": {
-                "type": "box",
-                "layout": "vertical",
-                "spacing": "sm",
-                "contents": [
-                    {
-                        "type": "button",
-                        "style": "primary",
-                        "color": "#27AE60",
-                        "action": {
-                            "type": "uri",
-                            "label": "🔗 開啟檔案連結",
-                            "uri": upload_result['web_view_link']
                         }
-                    },
-                    {
-                        "type": "button",
-                        "style": "secondary",
-                        "action": {
-                            "type": "uri",
-                            "label": "📁 查看資料夾",
-                            "uri": self._get_folder_link()
-                        }
-                    }
-                ],
-                "flex": 0
+                    ]
+                }
             }
         }
     
