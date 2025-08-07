@@ -19,6 +19,17 @@ async def callback(request: Request):
 
 @handler.add(MessageEvent, message=FileMessage)
 def handle_file_message(event):
+    # Debug 訊息
+    source_type = event.source.type
+    user_id = event.source.user_id if hasattr(event.source, 'user_id') else 'N/A'
+    group_id = event.source.group_id if hasattr(event.source, 'group_id') else 'N/A'
+    
+    print(f"📥 收到 FileMessage")
+    print(f"   檔案名稱: {event.message.file_name}")
+    print(f"   來源類型: {source_type}")
+    print(f"   使用者 ID: {user_id}")
+    print(f"   群組 ID: {group_id}")
+    
     file_name = event.message.file_name
     file_content = line_bot_api.get_message_content(event.message.id)
     with tempfile.NamedTemporaryFile(delete=False) as tmp:
