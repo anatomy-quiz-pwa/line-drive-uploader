@@ -90,10 +90,18 @@ def upload_file_to_drive(file_path, file_name):
         # 使用第一個 Shared Drive
         parent_folder_id = shared_drives[0]['id']
         print(f"   📂 使用 Shared Drive: {shared_drives[0]['name']}")
+    else:
+        print(f"   📂 沒有找到 Shared Drive，使用個人 Google Drive")
     
     # 自動建立或尋找上傳資料夾
-    upload_folder_id = find_or_create_folder("LINE 自動上傳", parent_folder_id)
-    print(f"   目標資料夾 ID: {upload_folder_id}")
+    try:
+        upload_folder_id = find_or_create_folder("LINE 自動上傳", parent_folder_id)
+        print(f"   目標資料夾 ID: {upload_folder_id}")
+    except Exception as e:
+        print(f"   ⚠️ Shared Drive 建立資料夾失敗: {str(e)}")
+        print(f"   📂 改用個人 Google Drive")
+        upload_folder_id = find_or_create_folder("LINE 自動上傳")
+        print(f"   目標資料夾 ID: {upload_folder_id}")
     
     mime_type = mimetypes.guess_type(file_path)[0] or 'application/octet-stream'
     print(f"   MIME 類型: {mime_type}")
