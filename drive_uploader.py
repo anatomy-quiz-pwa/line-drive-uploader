@@ -111,7 +111,11 @@ def create_folder(folder_name, parent_folder_id=None):
         print(f"   父資料夾 ID: {parent_folder_id}")
     
     try:
-        folder = drive_service.files().create(body=file_metadata, fields='id').execute()
+        folder = drive_service.files().create(
+            body=file_metadata, 
+            fields='id',
+            supportsAllDrives=True
+        ).execute()
         folder_id = folder.get('id')
         print(f"   ✅ 資料夾建立成功，ID: {folder_id}")
         return folder_id
