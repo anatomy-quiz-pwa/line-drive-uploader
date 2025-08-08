@@ -43,15 +43,22 @@ try:
             drive_info = drive_service.drives().get(driveId=SHARED_DRIVE_ID).execute()
             print(f"✅ 指定 Shared Drive 可讀取: {drive_info.get('name')}")
             
-            # 再測試寫入權限（嘗試列出檔案）
-            test_query = f"'{SHARED_DRIVE_ID}' in parents and trashed=false"
-            test_files = drive_service.files().list(
-                q=test_query,
-                pageSize=1,
-                fields="files(id)",
-                includeItemsFromAllDrives=True,
+            # 再測試寫入權限（嘗試建立測試資料夾）
+            test_folder_metadata = {
+                'name': 'TEST_WRITE_PERMISSION',
+                'mimeType': 'application/vnd.google-apps.folder',
+                'parents': [SHARED_DRIVE_ID]
+            }
+            test_folder = drive_service.files().create(
+                body=test_folder_metadata, 
+                fields='id',
                 supportsAllDrives=True
             ).execute()
+            test_folder_id = test_folder.get('id')
+            
+            # 立即刪除測試資料夾
+            drive_service.files().delete(fileId=test_folder_id, supportsAllDrives=True).execute()
+            
             print("✅ 指定 Shared Drive 可寫入")
             shared_drive_id = SHARED_DRIVE_ID
         except Exception as write_error:
@@ -64,14 +71,21 @@ try:
             # 測試第一個 Shared Drive 的寫入權限
             test_drive_id = drives[0]['id']
             try:
-                test_query = f"'{test_drive_id}' in parents and trashed=false"
-                test_files = drive_service.files().list(
-                    q=test_query,
-                    pageSize=1,
-                    fields="files(id)",
-                    includeItemsFromAllDrives=True,
+                test_folder_metadata = {
+                    'name': 'TEST_WRITE_PERMISSION',
+                    'mimeType': 'application/vnd.google-apps.folder',
+                    'parents': [test_drive_id]
+                }
+                test_folder = drive_service.files().create(
+                    body=test_folder_metadata, 
+                    fields='id',
                     supportsAllDrives=True
                 ).execute()
+                test_folder_id = test_folder.get('id')
+                
+                # 立即刪除測試資料夾
+                drive_service.files().delete(fileId=test_folder_id, supportsAllDrives=True).execute()
+                
                 shared_drive_id = test_drive_id
                 print(f"✅ 偵測到可寫入的 Shared Drive：{drives[0]['name']} (ID: {shared_drive_id})")
             except Exception as write_error:
