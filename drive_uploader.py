@@ -225,7 +225,12 @@ def upload_file_to_drive(file_path, file_name):
     
     print(f"   📤 執行上傳...")
     try:
-        file = drive_service.files().create(body=file_metadata, media_body=media, fields='id, webViewLink').execute()
+        file = drive_service.files().create(
+            body=file_metadata, 
+            media_body=media, 
+            fields='id, webViewLink',
+            supportsAllDrives=True
+        ).execute()
         
         file_id = file.get('id')
         web_link = file.get('webViewLink')
