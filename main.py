@@ -1,8 +1,9 @@
 from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from linebot import LineBotApi, WebhookHandler
 from linebot.models import MessageEvent, FileMessage, FlexSendMessage, TextSendMessage
 from config import LINE_CHANNEL_ACCESS_TOKEN, LINE_CHANNEL_SECRET
-from drive_uploader import upload_file_to_drive
+from drive_uploader import upload_file_to_drive, drive_diagnostics
 from message_formatter import create_flex_message
 import tempfile, os, datetime
 
@@ -17,6 +18,10 @@ async def root():
 @app.get("/health")
 async def health_check():
     return {"status": "healthy", "timestamp": datetime.datetime.now().isoformat()}
+
+@app.get("/diag/drive")
+async def diag_drive():
+    return JSONResponse(drive_diagnostics())
 
 @app.post("/callback")
 async def callback(request: Request):

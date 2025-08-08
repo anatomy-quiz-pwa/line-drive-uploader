@@ -4,7 +4,7 @@ from google.oauth2 import service_account
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
-from config import GOOGLE_SERVICE_ACCOUNT_JSON
+from config import GOOGLE_SERVICE_ACCOUNT_JSON, SHARED_DRIVE_ID
 import mimetypes
 
 # 檢查 GOOGLE_SERVICE_ACCOUNT_JSON 是檔案路徑還是 JSON 字串
@@ -30,6 +30,27 @@ except Exception as e:
     print(f"⚠️ 憑證刷新失敗: {str(e)}")
 
 drive_service = build('drive', 'v3', credentials=credentials)
+
+# Shared Drive 偵測和驗證
+shared_drive_id = None
+try:
+    if SHARED_DRIVE_ID:
+        # 明確指定用這顆 Shared Drive
+        print(f"🔒 使用指定的 Shared Drive: {SHARED_DRIVE_ID}")
+        # 驗證是否可存取
+        drive_service.drives().get(driveId=SHARED_DRIVE_ID).execute()
+        shared_drive_id = SHARED_DRIVE_ID
+        print("✅ 指定 Shared Drive 可存取")
+    else:
+        print("🔎 自動搜尋 Shared Drives...")
+        drives = drive_service.drives().list(pageSize=10).execute().get('drives', [])
+        if drives:
+            shared_drive_id = drives[0]['id']
+            print(f"🌀 偵測到 Shared Drive：{drives[0]['name']} (ID: {shared_drive_id})")
+        else:
+            print("⚠️ 未偵測到可用 Shared Drive，將使用個人雲端（Service Account 沒配額，可能失敗）")
+except Exception as e:
+    print(f"🚨 Shared Drive 驗證失敗（權限或網域政策問題）：{e}")
 
 def create_folder(folder_name, parent_folder_id=None):
     """建立 Google Drive 資料夾"""
@@ -64,7 +85,12 @@ def find_or_create_folder(folder_name, parent_folder_id=None):
         query += f" and '{parent_folder_id}' in parents"
     
     try:
-        results = drive_service.files().list(q=query, fields="files(id, name)").execute()
+        results = drive_service.files().list(
+            q=query, 
+            fields="files(id, name)",
+            includeItemsFromAllDrives=True,
+            supportsAllDrives=True
+        ).execute()
         files = results.get('files', [])
         
         if files:
@@ -93,19 +119,40 @@ def get_shared_drives():
         print(f"   ⚠️ 無法取得 Shared Drives: {str(e)}")
         return []
 
+def drive_diagnostics():
+    """診斷 Shared Drive 存取狀態"""
+    info = {"shared_drive_id": shared_drive_id}
+    try:
+        if shared_drive_id:
+            drv = drive_service.drives().get(driveId=shared_drive_id).execute()
+            info["shared_drive_name"] = drv.get("name")
+            # 試著列第一層項目
+            children = drive_service.files().list(
+                corpora='drive',
+                driveId=shared_drive_id,
+                includeItemsFromAllDrives=True,
+                supportsAllDrives=True,
+                q="trashed=false",
+                pageSize=10,
+                fields="files(id,name,mimeType)"
+            ).execute().get("files", [])
+            info["visible_items"] = children
+        else:
+            info["note"] = "未設定或偵測到 Shared Drive（將用個人雲端，Service Account 無配額）"
+    except Exception as e:
+        info["error"] = f"{e}"
+    return info
+
 def upload_file_to_drive(file_path, file_name):
     print(f"🚀 開始上傳檔案到 Google Drive")
     print(f"   檔案路徑: {file_path}")
     print(f"   檔案名稱: {file_name}")
     
-    # 嘗試使用 Shared Drive
-    shared_drives = get_shared_drives()
-    parent_folder_id = None
+    # 使用已驗證的 Shared Drive ID
+    parent_folder_id = shared_drive_id
     
-    if shared_drives:
-        # 使用第一個 Shared Drive
-        parent_folder_id = shared_drives[0]['id']
-        print(f"   📂 使用 Shared Drive: {shared_drives[0]['name']}")
+    if parent_folder_id:
+        print(f"   📂 使用 Shared Drive ID: {parent_folder_id}")
     else:
         print(f"   📂 沒有找到 Shared Drive，使用個人 Google Drive")
     
