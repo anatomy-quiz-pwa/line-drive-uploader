@@ -1,6 +1,7 @@
 import os
 import json
 from google.oauth2 import service_account
+from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 from config import GOOGLE_SERVICE_ACCOUNT_JSON
@@ -21,6 +22,13 @@ else:
         scopes=["https://www.googleapis.com/auth/drive"]
     )
 
+# 嘗試刷新憑證
+try:
+    credentials.refresh(Request())
+    print("✅ Google 憑證已刷新")
+except Exception as e:
+    print(f"⚠️ 憑證刷新失敗: {str(e)}")
+
 drive_service = build('drive', 'v3', credentials=credentials)
 
 def create_folder(folder_name, parent_folder_id=None):
@@ -37,11 +45,14 @@ def create_folder(folder_name, parent_folder_id=None):
         file_metadata['parents'] = [parent_folder_id]
         print(f"   父資料夾 ID: {parent_folder_id}")
     
-    folder = drive_service.files().create(body=file_metadata, fields='id').execute()
-    folder_id = folder.get('id')
-    
-    print(f"   ✅ 資料夾建立成功，ID: {folder_id}")
-    return folder_id
+    try:
+        folder = drive_service.files().create(body=file_metadata, fields='id').execute()
+        folder_id = folder.get('id')
+        print(f"   ✅ 資料夾建立成功，ID: {folder_id}")
+        return folder_id
+    except Exception as e:
+        print(f"   🚨 建立資料夾失敗: {str(e)}")
+        raise e
 
 def find_or_create_folder(folder_name, parent_folder_id=None):
     """尋找資料夾，如果不存在則建立"""
@@ -118,12 +129,16 @@ def upload_file_to_drive(file_path, file_name):
     media = MediaFileUpload(file_path, mimetype=mime_type)
     
     print(f"   📤 執行上傳...")
-    file = drive_service.files().create(body=file_metadata, media_body=media, fields='id, webViewLink').execute()
-    
-    file_id = file.get('id')
-    web_link = file.get('webViewLink')
-    print(f"   ✅ 上傳成功！")
-    print(f"   檔案 ID: {file_id}")
-    print(f"   網頁連結: {web_link}")
-    
-    return file_id, web_link 
+    try:
+        file = drive_service.files().create(body=file_metadata, media_body=media, fields='id, webViewLink').execute()
+        
+        file_id = file.get('id')
+        web_link = file.get('webViewLink')
+        print(f"   ✅ 上傳成功！")
+        print(f"   檔案 ID: {file_id}")
+        print(f"   網頁連結: {web_link}")
+        
+        return file_id, web_link
+    except Exception as e:
+        print(f"   🚨 上傳失敗: {str(e)}")
+        raise e 
