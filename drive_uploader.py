@@ -37,16 +37,46 @@ try:
     if SHARED_DRIVE_ID:
         # 明確指定用這顆 Shared Drive
         print(f"🔒 使用指定的 Shared Drive: {SHARED_DRIVE_ID}")
-        # 驗證是否可存取
-        drive_service.drives().get(driveId=SHARED_DRIVE_ID).execute()
-        shared_drive_id = SHARED_DRIVE_ID
-        print("✅ 指定 Shared Drive 可存取")
+        # 驗證是否可存取（測試寫入權限）
+        try:
+            # 先測試讀取權限
+            drive_info = drive_service.drives().get(driveId=SHARED_DRIVE_ID).execute()
+            print(f"✅ 指定 Shared Drive 可讀取: {drive_info.get('name')}")
+            
+            # 再測試寫入權限（嘗試列出檔案）
+            test_query = f"'{SHARED_DRIVE_ID}' in parents and trashed=false"
+            test_files = drive_service.files().list(
+                q=test_query,
+                pageSize=1,
+                fields="files(id)",
+                includeItemsFromAllDrives=True,
+                supportsAllDrives=True
+            ).execute()
+            print("✅ 指定 Shared Drive 可寫入")
+            shared_drive_id = SHARED_DRIVE_ID
+        except Exception as write_error:
+            print(f"❌ Shared Drive 寫入權限不足: {write_error}")
+            print("⚠️ 將改用個人 Google Drive（可能因配額限制失敗）")
     else:
         print("🔎 自動搜尋 Shared Drives...")
         drives = drive_service.drives().list(pageSize=10).execute().get('drives', [])
         if drives:
-            shared_drive_id = drives[0]['id']
-            print(f"🌀 偵測到 Shared Drive：{drives[0]['name']} (ID: {shared_drive_id})")
+            # 測試第一個 Shared Drive 的寫入權限
+            test_drive_id = drives[0]['id']
+            try:
+                test_query = f"'{test_drive_id}' in parents and trashed=false"
+                test_files = drive_service.files().list(
+                    q=test_query,
+                    pageSize=1,
+                    fields="files(id)",
+                    includeItemsFromAllDrives=True,
+                    supportsAllDrives=True
+                ).execute()
+                shared_drive_id = test_drive_id
+                print(f"✅ 偵測到可寫入的 Shared Drive：{drives[0]['name']} (ID: {shared_drive_id})")
+            except Exception as write_error:
+                print(f"❌ 偵測到的 Shared Drive 寫入權限不足: {write_error}")
+                print("⚠️ 將改用個人 Google Drive（可能因配額限制失敗）")
         else:
             print("⚠️ 未偵測到可用 Shared Drive，將使用個人雲端（Service Account 沒配額，可能失敗）")
 except Exception as e:
