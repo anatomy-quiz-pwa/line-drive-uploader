@@ -54,12 +54,20 @@ def handle_file_message(event):
         file_id, web_link = upload_file_to_drive(tmp_path, file_name)
         flex = create_flex_message(file_name, file_size, web_link, uploaded_at)
 
+        print(f"📝 準備回覆 Flex 訊息...")
+        print(f"   Flex 內容: {flex}")
+        
         try:
             line_bot_api.reply_message(event.reply_token, FlexSendMessage.new_from_json_dict(flex))
             print("✅ 成功回覆 Flex 訊息")
         except Exception as e:
             print(f"❌ Flex 回覆失敗：{e}")
-            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="❌ 上傳成功，但回覆訊息失敗。請聯絡管理員"))
+            print(f"   錯誤類型: {type(e).__name__}")
+            try:
+                line_bot_api.reply_message(event.reply_token, TextSendMessage(text="❌ 上傳成功，但回覆訊息失敗。請聯絡管理員"))
+                print("✅ 已回覆備用文字訊息")
+            except Exception as backup_error:
+                print(f"🚨 備用訊息也失敗: {backup_error}")
         
     except Exception as e:
         error_msg = f"❌ 檔案上傳失敗，請聯絡管理員"
