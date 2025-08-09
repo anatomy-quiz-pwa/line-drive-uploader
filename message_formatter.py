@@ -8,24 +8,7 @@ def create_flex_message(file_name, file_size_mb, web_link, uploaded_at):
                 "type": "box",
                 "layout": "vertical",
                 "contents": [
-                    {
-                        "type": "box",
-                        "layout": "horizontal",
-                        "contents": [
-                            {
-                                "type": "icon",
-                                "url": "https://drive.google.com/favicon.ico",
-                                "size": "lg"
-                            },
-                            {
-                                "type": "text",
-                                "text": "已上傳雲端",
-                                "weight": "bold",
-                                "size": "xl"
-                            }
-                        ],
-                        "spacing": "sm"
-                    },
+                    {"type": "text", "text": "☁️ 已上傳雲端", "weight": "bold", "size": "xl"},
                     {"type": "text", "text": f"檔案名稱：{file_name}"},
                     {"type": "text", "text": f"大小：{file_size_mb:.2f} MB"},
                     {"type": "text", "text": f"上傳時間：{uploaded_at}"}
